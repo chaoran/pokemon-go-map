@@ -22,6 +22,7 @@
     var pokemons = {};
     var source   = $("#label-template").html();
     var template = Handlebars.compile(source);
+    var openWindow;
 
     function loadPokemons() {
       var position = map.getCenter();
@@ -53,6 +54,8 @@
               map: map, icon: icon,
             });
             marker.addListener('click', function() {
+              if (openWindow) openWindow.close();
+              openWindow = info;
               info.open(map, marker);
             });
             setTimeout(function() {
@@ -76,11 +79,7 @@
           center: position, zoom: 16
         });
 
-        map.addListener('center_changed', function() {
-          if (window.pending) clearTimeout(window.pending);
-          window.pending = setTimeout(loadPokemons, 500);
-        });
-
+        map.addListener('dragend', loadPokemons);
         loadPokemons();
       });
     }
