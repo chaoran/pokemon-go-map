@@ -9,6 +9,7 @@ function Pokemon(raw) {
   this.latitude = raw.latitude;
   this.longitude = raw.longitude;
   this.expire = raw.time_till_hidden_ms;
+  this.encounter_id = raw.encounter_id;
 }
 
 module.exports = Pokemon;

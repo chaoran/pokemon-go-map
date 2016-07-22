@@ -19,13 +19,17 @@ app.get('/pokemons', function(req, res) {
 
   console.log('executing %s', command);
   execFile('python', command, function(err, stdout, stderr) {
-    console.log(stdout)
-    console.log(stderr)
-
     if (err) {
-      res.send(stderr);
+      res.send({ error: e, stderr: stderr });
     } else {
-      var result = JSON.parse(stdout);
+      var result;
+
+      try {
+        result = JSON.parse(stdout);
+      } catch (e) {
+        res.send({ error: e, stderr: stderr });
+      }
+
       var pokemons = result.pokemons;
       var list = [];
 
