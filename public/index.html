@@ -11,7 +11,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
-
     <script id="label-template" type="text/x-handlebars-template">
       <div>
         <strong>{{name}}</strong>
@@ -35,6 +34,7 @@
     var source   = $("#label-template").html();
     var template = Handlebars.compile(source);
     var buttonHtml = $('#button-template').html();
+    var openWindow;
 
     function loadPokemons() {
       var position = map.getCenter();
