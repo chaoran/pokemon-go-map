@@ -4,12 +4,15 @@
     <title>Simple Map</title>
     <meta name="viewport" content="initial-scale=1.0">
     <meta charset="utf-8">
+
     <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="js.cookie.js"></script>
 
     <script id="label-template" type="text/x-handlebars-template">
       <div>
@@ -28,94 +31,14 @@
       <a id="refresh-pokemon"
          class="btn-floating btn-large waves-effect waves-light red"
          style="margin: 10px">
-        <i class="material-icons large">replay</i>
+        <i class="material-icons large">search</i>
       </a>
     </script>
   </head>
   <body>
     <div id="map"></div>
     <div id="spinner"></div>
-    <script>
-    var map;
-    var pokemons = {};
-    var source   = $("#label-template").html();
-    var template = Handlebars.compile(source);
-    var buttonHtml = $('#button-template').html();
-    var openWindow;
-
-    function loadPokemons() {
-      var position = map.getCenter();
-      $('#spinner').html('<div class="loading">Loading&#8230;</div>');
-
-      $.ajax({
-        url: "/pokemons",
-        data: position.toJSON(),
-        success: function(result) {
-          if (result.error) {
-            $("body").html(result.error);
-            return;
-          }
-
-          result.pokemons.forEach(function(pokemon) {
-            if (pokemons[pokemon.encounter_id]) return;
-
-            pokemons[pokemon.encounter_id] = pokemon;
-
-            var icon = 'img/icons/' + pokemon.id + '.png';
-            var info = new google.maps.InfoWindow();
-            var marker = new google.maps.Marker({
-              position: { lat: pokemon.latitude, lng: pokemon.longitude },
-              map: map, icon: icon,
-            });
-            marker.addListener('click', function() {
-              if (openWindow) openWindow.close();
-              info.setContent(template({
-                name: pokemon.name,
-                disappear_time: ((pokemon.expire -
-                  Date.now())/60000).toFixed(2),
-                lat: pokemon.latitude,
-                lng: pokemon.longitude
-              }));
-              info.open(map, marker);
-              openWindow = info;
-            });
-            setTimeout(function() {
-              marker.setMap(null);
-              delete pokemons[pokemon.encounter_id];
-            }, pokemon.expire);
-          });
-
-          $('.loading').remove();
-        }
-      });
-    }
-
-    function initMap() {
-      navigator.geolocation.getCurrentPosition(function(position) {
-        var position = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        map = new google.maps.Map(document.getElementById('map'), {
-          center: position, zoom: 16,
-          streetViewControl: false,
-          zoomControlOptions: {
-            position: google.maps.ControlPosition.TOP_RIGHT
-          },
-        });
-
-        var button = document.createElement('div');
-        var $button = $(button);
-
-        $button.html(buttonHtml);
-        $button.children('#refresh-pokemon').on('click', loadPokemons);
-
-        map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(button);
-
-        loadPokemons();
-      });
-    }
-    </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyALXyMXFNOtTS0JOkl_-hsO84LfOypgoQA&callback=initMap" async defer></script>
+    <script src="app.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyALXyMXFNOtTS0JOkl_-hsO84LfOypgoQA&callback=main" async defer></script>
   </body>
 </html>
