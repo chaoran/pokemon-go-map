@@ -5,13 +5,11 @@
 
   function loadPokemons() {
     var position = map.getCenter();
-    Cookies.set('position', position.toJSON());
-
-    $('#spinner').html('<div class="loading">Loading&#8230;</div>');
-
     if (!template) {
       template = Handlebars.compile($("#label-template").html());
     }
+
+    $('#spinner').html('<div class="loading">Loading&#8230;</div>');
 
     $.ajax({
       url: "/pokemons",
@@ -45,15 +43,35 @@
             info.open(map, marker);
             openWindow = info;
           });
-          setTimeout(function() {
-            marker.setMap(null);
-            delete pokemons[pokemon.encounter_id];
-          }, pokemon.expire);
+          pokemon.marker = marker;
         });
 
         $('.loading').remove();
       }
     });
+  }
+
+  function locateMe() {
+    $('#spinner').html('<div class="loading">Loading&#8230;</div>');
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      map.setCenter({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude
+      });
+      $('.loading').remove();
+    });
+  }
+
+  function removeHiddenPokemons() {
+    for (var key in pokemons) {
+      var pokemon = pokemons[key];
+      var now = Date.now();
+
+      if (now > pokemon.expire) {
+        pokemon.marker.setMap(null);
+        delete pokemons[key];
+      }
+    }
   }
 
   function initMap() {
@@ -75,12 +93,25 @@
       },
     });
 
-    var button = document.createElement('div');
+    map.addListener('center_changed', function() {
+      var latlng = map.getCenter();
+      Cookies.set('position', latlng);
+    });
 
-    $(button).html($('#button-template').html());
-    $(button).children('#refresh-pokemon').on('click', loadPokemons);
+    setInterval(removeHiddenPokemons, 5000);
 
-    map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(button);
+    var btnTplt = Handlebars.compile($("#button-template").html());
+
+    var searchBtn = document.createElement('div');
+    $(searchBtn).html(btnTplt({ name: 'search', color: 'red' }));
+    $(searchBtn).children('#search').on('click', loadPokemons);
+
+    var locateBtn = document.createElement('div');
+    $(locateBtn).html(btnTplt({ name: 'my_location', color: 'blue' }));
+    $(locateBtn).children('#my_location').on('click', locateMe);
+
+    map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(searchBtn);
+    map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(locateBtn);
   }
 
   app.main = initMap;
