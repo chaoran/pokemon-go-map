@@ -47,6 +47,11 @@
         });
 
         $('.loading').remove();
+      },
+      error: function(jqXHR, textStatus, errorThrown) {
+        console.log(jqXHR.responseText);
+        $('.loading').remove();
+        Materialize.toast('An error occured. Please try again.', 5000);
       }
     });
   }
