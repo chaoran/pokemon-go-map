@@ -80,13 +80,9 @@
   }
 
   function initMap() {
-    var position = Cookies.get('position');
+    var position = Cookies.getJSON('position');
 
-    if (position) {
-      try {
-        position = JSON.parse(position);
-      } catch (e) {}
-    } else {
+    if (!position) {
       position = { lat: 47.6205, lng: -122.3493 };
     }
 
@@ -100,7 +96,7 @@
 
     map.addListener('center_changed', function() {
       var latlng = map.getCenter();
-      Cookies.set('position', latlng);
+      Cookies.set('position', latlng, { expire: 365 });
     });
 
     setInterval(removeHiddenPokemons, 5000);
