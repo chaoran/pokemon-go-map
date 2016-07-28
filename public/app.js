@@ -33,10 +33,13 @@
           });
           marker.addListener('click', function() {
             if (openWindow) openWindow.close();
+            var expire = pokemon.expire - Date.now();
             info.setContent(template({
               name: pokemon.name,
-              disappear_time: ((pokemon.expire -
-                                Date.now())/60000).toFixed(2),
+              disappear_time: {
+                mm: (expire/60000).toFixed(0),
+                ss: ((expire%60000)/1000).toFixed(0),
+              },
               lat: pokemon.latitude,
               lng: pokemon.longitude
             }));

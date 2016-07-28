@@ -4,11 +4,11 @@ const pokemonNames = JSON.parse(
 );
 
 function Pokemon(raw) {
-  this.id = raw.pokemon_data.pokemon_id;
+  this.id = raw.id
   this.name = pokemonNames[this.id];
   this.latitude = raw.latitude;
   this.longitude = raw.longitude;
-  this.expire = Date.now() + raw.time_till_hidden_ms;
+  this.expire = raw.expire_time;
   this.encounter_id = raw.encounter_id.toString();
 }
 

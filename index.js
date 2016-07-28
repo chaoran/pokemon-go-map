@@ -17,7 +17,10 @@ app.get('/pokemons', function(req, res, next) {
   var position = req.query;
 
   scan(position, (err, result) => {
-    if (err) next(err);
+    if (err) {
+      console.log(err);
+      next(err);
+    }
     else res.send(result);
   });
 });
@@ -65,7 +68,6 @@ function search(coords, result, callback) {
 
   this.Heartbeat(function(err, hb) {
     if (err) return callback(err);
-    console.log(hb);
 
     for (var i = hb.cells.length - 1; i >= 0; i--) {
       for (var j = hb.cells[i].WildPokemon.length - 1; j >= 0; --j) {
@@ -79,8 +81,10 @@ function search(coords, result, callback) {
 }
 
 function scan(position, callback) {
+  console.log('searching for pokemons at (%d, %d)', position.lat, position.lng);
+
   var command = [
-    'spiral_poi_search.py',
+    'pogo/demo.py',
     '-a', provider,
     '-u', username,
     '-p', password,
@@ -88,7 +92,7 @@ function scan(position, callback) {
   ];
   execFile('python', command, function(err, stdout, stderr) {
     if (err) {
-      return callback({ error: stderr });
+      return callback(stderr);
     }
 
     var result;
@@ -96,12 +100,14 @@ function scan(position, callback) {
     try {
       result = JSON.parse(stdout);
     } catch (e) {
-      return callback({ error: stderr });
+      return callback(stderr);
     }
 
-    var pokemons = Object.keys(result.pokemons).map(
-      (key) => new Pokemon(result.pokemons[key])
+    var pokemons = Object.keys(result).map(
+      (key) => new Pokemon(result[key])
     );
+
+    console.log('found %d pokemons', pokemons.length);
     return callback(null, { pokemons: pokemons });
   });
 }
