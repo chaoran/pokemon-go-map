@@ -436,8 +436,8 @@ if __name__ == '__main__':
             pokemons = {}
             #print ', '.join(forts)
             for fort in forts:
-              details = session.getFortDetails(fort)
-              logging.info("Walking to Fort \"%s\":" % details.name)
+              #details = session.getFortDetails(fort)
+              #logging.info("Walking to Fort \"%s\":" % details.name)
               session.setCoordinates(fort.latitude, fort.longitude)
               #session.walkTo(fort.latitude, fort.longitude)
               pokemons = findPokemons(session, pokemons)
