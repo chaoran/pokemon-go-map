@@ -184,12 +184,12 @@ def find_poi(api, lat, lng):
                     if 'wild_pokemons' in map_cell:
                         for pokemon in map_cell['wild_pokemons']:
                             pokekey = get_key_from_pokemon(pokemon)
-                            pokemon['hides_at'] = time.time() + pokemon['time_till_hidden_ms']/1000
+                            pokemon['expire_time'] = time.time() * 1000 + pokemon['time_till_hidden_ms']
                             poi['pokemons'][pokekey] = pokemon
 
         # time.sleep(0.51)
     # new dict, binary data
-    print('{}'.format(json.dumps(poi, indent=2)))
+    print('{}'.format(json.dumps(poi['pokemons'], indent=2)))
     #print('{}'.format(pprint.PrettyPrinter(indent=4).pformat(poi)))
     #print('Open this in a browser to see the path the spiral search took:')
     #print_gmaps_dbug(coords)
