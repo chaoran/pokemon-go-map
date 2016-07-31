@@ -130,8 +130,10 @@ Scanner.prototype.getForts = function(coords, callback) {
       }
     }
 
-    forts = _.uniqBy(_.values(forts), 'id');
-    forts = geolib.orderByDistance(coords, _.values(forts));
+    forts = _.values(forts);
+    //forts = _.uniqBy(forts, 'id');
+    forts = geolib.orderByDistance(coords, forts);
+    forts = forts.filter((x) => x.distance < 200);
     var scans = forts.map((fort) => {
       return (callback) => this.getPokemons(fort, callback);
     });
