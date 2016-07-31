@@ -2,71 +2,62 @@
   var map;
   var pokemons = {};
   var openWindow, template;
+  var socket = io();
+
+  if (!template) {
+    template = Handlebars.compile($("#label-template").html());
+  }
+
+  socket.on('error', function(err) {
+    console.log(err);
+  });
+
+  socket.on('pokemon', function(pokemon) {
+    console.log('received', pokemon);
+
+    if (pokemons[pokemon.encounter_id]) {
+      pokemons[pokemon.encounter_id].marker.setMap(null);
+      delete pokemons[pokemon.encounter_id];
+    }
+
+    pokemons[pokemon.encounter_id] = pokemon;
+
+    var icon = 'img/icons/' + pokemon.id + '.png';
+    var info = new google.maps.InfoWindow();
+    var marker = new google.maps.Marker({
+      position: { lat: pokemon.latitude, lng: pokemon.longitude },
+      map: map, icon: icon,
+    });
+    marker.addListener('click', function() {
+      if (openWindow) openWindow.close();
+      var expire = pokemon.expire - Date.now();
+      info.setContent(template({
+        name: pokemon.name,
+        disappear_time: {
+          mm: (expire/60000).toFixed(0),
+          ss: ((expire%60000)/1000).toFixed(0),
+        },
+        lat: pokemon.latitude,
+        lng: pokemon.longitude
+      }));
+      info.open(map, marker);
+      openWindow = info;
+    });
+
+    pokemon.marker = marker;
+  });
 
   function loadPokemons() {
     var position = map.getCenter();
-    if (!template) {
-      template = Handlebars.compile($("#label-template").html());
-    }
-
-    $('#spinner').html('<div class="loading">Loading&#8230;</div>');
-
-    $.ajax({
-      url: "/pokemons",
-      data: position.toJSON(),
-      success: function(result) {
-        if (result.error) {
-          $("body").html(result.error);
-          return;
-        }
-
-        result.pokemons.forEach(function(pokemon) {
-          if (pokemons[pokemon.encounter_id]) return;
-
-          pokemons[pokemon.encounter_id] = pokemon;
-
-          var icon = 'img/icons/' + pokemon.id + '.png';
-          var info = new google.maps.InfoWindow();
-          var marker = new google.maps.Marker({
-            position: { lat: pokemon.latitude, lng: pokemon.longitude },
-            map: map, icon: icon,
-          });
-          marker.addListener('click', function() {
-            if (openWindow) openWindow.close();
-            var expire = pokemon.expire - Date.now();
-            info.setContent(template({
-              name: pokemon.name,
-              disappear_time: {
-                mm: (expire/60000).toFixed(0),
-                ss: ((expire%60000)/1000).toFixed(0),
-              },
-              lat: pokemon.latitude,
-              lng: pokemon.longitude
-            }));
-            info.open(map, marker);
-            openWindow = info;
-          });
-          pokemon.marker = marker;
-        });
-
-        $('.loading').remove();
-      },
-      error: function(jqXHR, textStatus, errorThrown) {
-        console.log(jqXHR.responseText);
-        $('.loading').remove();
-        Materialize.toast('An error occured. Please try again.', 5000);
-      }
-    });
+    socket.emit('scan', position);
   }
 
   function locateMe() {
-    $('#spinner').html('<div class="loading">Loading&#8230;</div>');
     navigator.geolocation.getCurrentPosition(function(pos) {
       map.setCenter({
         lat: pos.coords.latitude,
         lng: pos.coords.longitude
       });
-      $('.loading').remove();
     });
   }
 
@@ -75,7 +66,7 @@
       var pokemon = pokemons[key];
       var now = Date.now();
 
-      if (now > pokemon.expire) {
+      if (pokemon.expire !== null && now > pokemon.expire) {
         pokemon.marker.setMap(null);
         delete pokemons[key];
       }
