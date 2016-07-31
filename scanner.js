@@ -42,7 +42,7 @@ Scanner.prototype.clean = function() {
 };
 
 Scanner.prototype.scan = function(position) {
-  if (!this.ready) this.login(position, (err) => {
+  if (!this.ready) return this.login(position, (err) => {
     if (err) this.emit('error', err);
     else this.scan(position);
   });
@@ -133,10 +133,8 @@ Scanner.prototype.parseHeartbeat = function(hb) {
   }
 }
 
-Scanner.prototype.login = function(position, retries) {
+Scanner.prototype.login = function(position, callback, retries) {
   if (!retries) retries = 0;
-
-  console.log(this.username, this.password, this.provider);
 
   this.api.init(
     this.username,
@@ -169,6 +167,7 @@ Scanner.prototype.login = function(position, retries) {
           } else {
             retries = 0;
             this.ready = true;
+            callback(null);
           }
         });
       }
