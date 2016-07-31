@@ -3,6 +3,7 @@ const util = require('util');
 const EventEmitter = require('events');
 const PokemonGO = require('pokemon-go-node-api');
 const _ = require('lodash');
+const geolib = require('geolib');
 
 const pokemonNames = JSON.parse(
   fs.readFileSync('pokemon.en.json', { encoding: 'utf8' })
@@ -11,201 +12,196 @@ const pokemonNames = JSON.parse(
 function Scanner(options) {
   EventEmitter.call(this);
 
-  this.errorThreshold = 10;
-  this.seen = {};
-  this.positions = [];
+  this.pokemons = {};
 
   options = options || {};
   this.username = options.username || 'chaoran.rice@gmail.com';
   this.password = options.password || '13810217570';
   this.provider = options.provider || 'google';
 
-  this.api = new PokemonGO.Pokeio();
+  this.q = [];
+  this.timer;
 
-  this.search();
-  this.clean();
+  var exec = () => {
+    var task = this.q.shift();
+
+    if (!task) {
+      timer = setTimeout(exec, 5000);
+      return;
+    }
+
+    task((err, tasks) => {
+      if (err) {
+        delete this.api;
+        this.q.unshift(task);
+      } else if (tasks) {
+        this.q = tasks.concat(this.q);
+      }
+
+      timer = setTimeout(exec, 5000);
+    });
+  }
+
+  exec();
 }
 
 util.inherits(Scanner, EventEmitter);
 
-Scanner.prototype.clean = function() {
+Scanner.prototype.load = function() {
   var now = Date.now();
 
-  Object.keys(this.seen).forEach((key) => {
-    var pokemon = this.seen[key];
+  _.values(this.pokemons).forEach((pokemon) => {
     if (pokemon.expire !== null && pokemon.expire < now) {
-      delete this.seen[key];
+      delete this.pokemons[pokemon.encounter_id];
     }
   });
 
-  this.cleanHandle = setTimeout(() => { this.clean() });
+  return _.values(this.pokemons);
 };
 
-Scanner.prototype.scan = function(position) {
-  if (!this.ready) return this.login(position, (err) => {
-    if (err) this.emit('error', err);
-    else this.scan(position);
+Scanner.prototype.scan = function(coords) {
+  this.q = [ ((callback) => { this.getForts(coords, callback); }) ];
+};
+
+Scanner.prototype.login = function(coords, callback) {
+  var api = new PokemonGO.Pokeio();
+
+  console.log('logging in...', {
+    username: this.username,
+    password: this.password,
+    provider: this.provider,
+    coords: coords
   });
 
-  /** Walk around the given point. */
-  this.positions = spiral_walk(position, 0.0015, 49);
-}
+  api.init(this.username, this.password, {
+    type: 'coords',
+    coords: {
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      altitude: 0
+    }
+  }, this.provider, (err) => {
+    if (err) return callback(err);
 
-Scanner.prototype.search = function(coords, retries) {
-  if (!retries) retries = 0;
-  if (!coords) coords = this.positions.shift();
-  if (!coords) {
-    this.searchHandle = setTimeout(() => { this.search(); });
-    return;
+    api.GetProfile((err) => {
+      if (err) return callback(err);
+
+      this.api = api;
+      callback(null);
+    });
+  });
+};
+
+Scanner.prototype.getForts = function(coords, callback) {
+  if (!this.api) {
+    return callback(
+      null,
+      [
+        (callback) => { this.login(coords, callback) },
+        (callback) => { this.getForts(coords, callback) }
+      ]
+    );
   }
 
-  console.log('searching', coords);
+  console.log('getting forts...', coords);
 
-  this.api.playerInfo.latitude = coords.lat;
-  this.api.playerInfo.longitude = coords.lng;
+  this.api.playerInfo.latitude = coords.latitude;
+  this.api.playerInfo.longitude = coords.longitude;
 
   this.api.Heartbeat((err, hb) => {
-    if (err) {
-      retries += 1;
-      console.log('retrying');
+    if (err) return callback(err);
 
-      if (retries === this.errorThreshold) {
-        this.emit('error', err);
-        console.log(err);
+    var forts = {};
+
+    for (var i = hb.cells.length - 1; i >= 0; i--) {
+      for (var j = hb.cells[i].Fort.length - 1; j >= 0; --j) {
+        var fort = hb.cells[i].Fort[j];
+
+        if (forts[fort.FortId]) continue;
+
+        forts[fort.FortId] = {
+          latitude: fort.Latitude,
+          longitude: fort.Longitude
+        };
       }
-    } else {
-      retries = 0;
-      this.parseHeartbeat(hb);
-      coords = undefined;
     }
 
-    this.searchHandle = setTimeout(() => {
-      this.search(coords, retries);
-    }, 500);
+    forts = geolib.orderByDistance(coords, _.values(forts));
+    var scans = forts.map((fort) => {
+      return (callback) => this.getPokemons(fort, callback);
+    });
+    callback(null, scans);
   });
-}
-
-Scanner.prototype.parseHeartbeat = function(hb) {
-  for (var i = hb.cells.length - 1; i >= 0; i--) {
-    for (var j = hb.cells[i].WildPokemon.length - 1; j >= 0; --j) {
-      var data = hb.cells[i].WildPokemon[j];
-      var eid = data.EncounterId.toString();
-      var timestamp = parseInt(hb.cells[i].AsOfTimeMs.toString());
-      var expire = data.TimeTillHiddenMs > 0 ?
-        data.TimeTillHiddenMs + timestamp : null;
-
-      var pokemon = {
-        id: data.pokemon.PokemonId,
-        expire: expire,
-        name: pokemonNames[data.pokemon.PokemonId],
-        latitude: data.Latitude,
-        longitude: data.Longitude,
-        encounter_id: eid,
-      };
-
-      if (!_.isEqual(this.seen[eid], pokemon)) {
-        console.log(pokemon);
-        this.emit('pokemon', pokemon);
-        this.seen[eid] = pokemon;
-      }
-    }
-
-    for (var j = hb.cells[i].MapPokemon.length - 1; j >= 0; --j) {
-      var data = hb.cells[i].MapPokemon[j];
-      var eid = data.EncounterId.toString();
-      var expire = parseInt(data.ExpirationTimeMs.toString());
-
-      var pokemon = {
-        id: data.PokedexTypeId,
-        expire: expire,
-        name: pokemonNames[data.PokedexTypeId],
-        latitude: data.Latitude,
-        longitude: data.Longitude,
-        encounter_id: eid,
-      };
-
-      if (!_.isEqual(this.seen[eid], pokemon)) {
-        console.log(pokemon);
-        this.emit('pokemon', pokemon);
-        this.seen[eid] = pokemon;
-      }
-    }
-  }
-}
-
-Scanner.prototype.login = function(position, callback, retries) {
-  if (!retries) retries = 0;
-
-  this.api.init(
-    this.username,
-    this.password,
-    {
-      type: 'coords',
-      coords: {
-        latitude: position.lat,
-        longitude: position.lng,
-        altitude: 0
-      }
-    },
-    this.provider,
-    (err) => {
-      if (err) {
-        retries += 1;
-
-        if (retries === this.errorThreshold) {
-          this.emit('error', err);
-        }
-      } else {
-        retries = 0;
-        this.api.GetProfile((err) => {
-          if (err) {
-            retries += 1;
-
-            if (retries === this.errorThreshold) {
-              this.emit('error', err);
-            }
-          } else {
-            retries = 0;
-            this.ready = true;
-            callback(null);
-          }
-        });
-      }
-    }
-  );
 };
 
-function spiral_walk(origin, step, limit) {
-  var coords = [ origin ];
-  var x = 0, y = 0;
-  var d = 1, m = 1;
-  var high = 0.0005;
-  var steps = 1;
-
-  while (steps < limit) {
-    while (2 * x * d < m && steps < limit) {
-      x += d;
-      steps += 1;
-      coords.push({
-        lat: x * step + origin.lat + Math.random() * high,
-        lng: y * step + origin.lng + Math.random() * high,
-      });
-    }
-    while (2 * y * d < m && steps < limit) {
-      y += d;
-      steps += 1;
-      coords.push({
-        lat: x * step + origin.lat + Math.random() * high,
-        lng: y * step + origin.lng + Math.random() * high,
-      });
-    }
-
-    d *= -1;
-    m += 1;
+Scanner.prototype.getPokemons = function(coords, callback) {
+  if (!this.api) {
+    return callback(
+      null,
+      [
+        (callback) => { this.login(coords, callback) },
+        (callback) => { this.getPokemons(coords, callback) }
+      ]
+    );
   }
 
-  return coords;
-}
+  console.log('getting pokemons...', coords);
 
+  this.api.playerInfo.latitude = coords.latitude;
+  this.api.playerInfo.longitude = coords.longitude;
+
+  this.api.Heartbeat((err, hb) => {
+    if (err) return callback(err);
+
+    for (var i = hb.cells.length - 1; i >= 0; i--) {
+      for (var j = hb.cells[i].WildPokemon.length - 1; j >= 0; --j) {
+        var data = hb.cells[i].WildPokemon[j];
+        var eid = data.EncounterId.toString();
+        var timestamp = parseInt(hb.cells[i].AsOfTimeMs.toString());
+        var expire = data.TimeTillHiddenMs > 0 ?
+          data.TimeTillHiddenMs + timestamp : null;
+
+        var pokemon = {
+          id: data.pokemon.PokemonId,
+          expire: expire,
+          name: pokemonNames[data.pokemon.PokemonId],
+          latitude: data.Latitude,
+          longitude: data.Longitude,
+          encounter_id: eid,
+        };
+
+        if (!this.pokemons[eid]) {
+          this.emit('pokemon', pokemon);
+        }
+
+        this.pokemons[eid] = pokemon;
+      }
+
+      for (var j = hb.cells[i].MapPokemon.length - 1; j >= 0; --j) {
+        var data = hb.cells[i].MapPokemon[j];
+        var eid = data.EncounterId.toString();
+        var expire = parseInt(data.ExpirationTimeMs.toString());
+
+        var pokemon = {
+          id: data.PokedexTypeId,
+          expire: expire,
+          name: pokemonNames[data.PokedexTypeId],
+          latitude: data.Latitude,
+          longitude: data.Longitude,
+          encounter_id: eid,
+        };
+
+        if (!this.pokemons[eid]) {
+          this.emit('pokemon', pokemon);
+        }
+
+        this.pokemons[eid] = pokemon;
+      }
+    }
+
+    this.q.push((callback) => { this.getPokemons(coords, callback) });
+    callback();
+  });
+};
 
 module.exports = Scanner;
