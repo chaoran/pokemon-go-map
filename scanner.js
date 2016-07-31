@@ -4,6 +4,7 @@ const EventEmitter = require('events');
 const PokemonGO = require('pokemon-go-node-api');
 const _ = require('lodash');
 const geolib = require('geolib');
+const s2 = require('s2geometry-node');
 
 const pokemonNames = JSON.parse(
   fs.readFileSync('pokemon.en.json', { encoding: 'utf8' })
@@ -121,11 +122,15 @@ Scanner.prototype.getForts = function(coords, callback) {
 
         forts[fort.FortId] = {
           latitude: fort.Latitude,
-          longitude: fort.Longitude
+          longitude: fort.Longitude,
+          id: new s2.S2CellId(
+            new s2.S2LatLng(fort.Latitude, fort.Longitude)
+          ).parent(15).toToken()
         };
       }
     }
 
+    forts = _.uniqBy(_.values(forts), 'id');
     forts = geolib.orderByDistance(coords, _.values(forts));
     var scans = forts.map((fort) => {
       return (callback) => this.getPokemons(fort, callback);
