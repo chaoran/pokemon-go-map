@@ -12,6 +12,38 @@
     console.log(err);
   });
 
+  var path;
+
+  socket.on('walk', function(points) {
+    if (path) path.setMap(null);
+
+    path = new google.maps.Polyline({
+      path: points.map(function(p) {
+        return { lat: p.latitude, lng: p.longitude }
+      }),
+      geodesic: true,
+      strokeColor: '#FF0000',
+      strokeOpacity: 0.5,
+      strokeWeight: 4
+    });
+
+    path.setMap(map);
+  });
+
+  var scanMarker;
+
+  socket.on('scan', function(coords) {
+    if (scanMarker) scanMarker.setMap(null);
+
+    scanMarker = new google.maps.Marker({
+      position: {
+        lat: coords.latitude,
+        lng: coords.longitude
+      },
+      map: map
+    });
+  });
+
   socket.on('pokemon', function(pokemon) {
     console.log('received', pokemon);
 

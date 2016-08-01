@@ -62,6 +62,14 @@ io.on('connection', function(socket){
     socket.emit('error', err);
   });
 
+  scanner.on('scan', function(coords) {
+    socket.emit('scan', coords);
+  });
+
+  scanner.on('walk', function(points) {
+    socket.emit('walk', points);
+  });
+
   socket.on('scan', function(position) {
     scanner.scan({ latitude: position.lat, longitude: position.lng });
   });
