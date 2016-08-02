@@ -164,7 +164,7 @@ Scanner.prototype.getPokemons = function(coords, callback) {
         };
 
         if (this.pokemons[eid] === undefined ||
-            this.pokemons[eid].expire === null) {
+            this.pokemons[eid].expire !== pokemon.expire) {
           this.emit('pokemon', pokemon);
         }
 
@@ -190,7 +190,7 @@ Scanner.prototype.getPokemons = function(coords, callback) {
         };
 
         if (this.pokemons[eid] === undefined ||
-            this.pokemons[eid].expire === null) {
+            this.pokemons[eid].expire !== pokemon.expire) {
           this.emit('pokemon', pokemon);
         }
 
