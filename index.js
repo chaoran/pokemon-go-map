@@ -33,7 +33,7 @@ scanner.on('pokemon', function(pokemon) {
     if (expire !== null) {
       expire -= Date.now();
       mm = Math.floor(expire / 60000);
-      ss = (expire / 1000) % 60;
+      ss = Math.floor((expire / 1000) % 60);
     } else {
       mm = 'UNKNOWN';
       ss = 'UNKNOWN';
