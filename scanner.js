@@ -139,8 +139,15 @@ Scanner.prototype.getPokemons = function(coords, callback) {
         var data = hb.cells[i].WildPokemon[j];
         var timestamp = hb.cells[i].AsOfTimeMs.toNumber();
 
-        var expire = data.TimeTillHiddenMs > 0 ?
-          data.TimeTillHiddenMs + timestamp : null;
+        var expire;
+
+        if (data.TimeTillHiddenMs < 0) {
+          expire = null;
+          console.log("found negative timestamp:",
+                      JSON.stringify(data, null, 2));
+        } else {
+          expire = data.TimeTillHiddenMs + timestamp;
+        }
 
         var eid = Buffer.alloc(8);
         var l = data.EncounterId.toUnsigned();
@@ -156,7 +163,8 @@ Scanner.prototype.getPokemons = function(coords, callback) {
           encounter_id: eid.toString('hex'),
         };
 
-        if (this.pokemons[eid] === undefined) {
+        if (this.pokemons[eid] === undefined ||
+            this.pokemon[eid].expire === null) {
           this.emit('pokemon', pokemon);
         }
 
@@ -181,7 +189,8 @@ Scanner.prototype.getPokemons = function(coords, callback) {
           encounter_id: eid.toString('hex'),
         };
 
-        if (this.pokemons[eid] === undefined) {
+        if (this.pokemons[eid] === undefined ||
+            this.pokemon[eid].expire === null) {
           this.emit('pokemon', pokemon);
         }
 
