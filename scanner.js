@@ -56,9 +56,11 @@ util.inherits(Scanner, EventEmitter);
 Scanner.prototype.load = function() {
   var now = Date.now();
 
-  _.values(this.pokemons).forEach((pokemon) => {
+  Object.keys(this.pokemons).forEach((key) => {
+    var pokemon = this.pokemons[key];
+
     if (pokemon.expire !== null && pokemon.expire < now) {
-      delete this.pokemons[pokemon.encounter_id];
+      delete this.pokemons[key];
     }
   });
 
