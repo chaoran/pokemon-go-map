@@ -28,8 +28,16 @@ scanner.on('pokemon', function(pokemon) {
 
   if (whitelist[pokemon.id]) {
     var expire = pokemon.expire;
-    var mm = expire ? Math.floor(expire / 60000) : 'unknown';
-    var ss = expire ? (expire / 1000) % 60 : 'unknown';
+    var mm, ss;
+
+    if (expire !== null) {
+      expire -= Date.now();
+      mm = Math.floor(expire / 60000);
+      ss = (expire / 1000) % 60;
+    } else {
+      mm = 'UNKNOWN';
+      ss = 'UNKNOWN';
+    }
 
     transporter.sendMail({
       from: '"Chaoran Yang" <chaoran@rice.edu>',
