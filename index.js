@@ -54,6 +54,10 @@ io.on('connection', function(socket){
     socket.emit('pokemon', pokemon);
   });
 
+  if (scanner.coords) {
+    socket.emit('walk', points);
+  }
+
   scanner.on('pokemon', function(pokemon) {
     socket.emit('pokemon', pokemon);
   });

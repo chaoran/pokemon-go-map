@@ -29,11 +29,11 @@ function Scanner(options) {
     if (!task) {
       if (!this.coords) {
         timer = setTimeout(exec, 5000);
-        return;
       } else {
-        this.walk(this.coords);
+        this.walk(this.coords, () => {});
         exec();
       }
+      return;
     }
 
     task((err, tasks) => {
@@ -72,12 +72,12 @@ Scanner.prototype.scan = function(coords) {
 Scanner.prototype.login = function(coords, callback) {
   var api = new PokemonGO.Pokeio();
 
-  console.log('logging in...', {
-    username: this.username,
-    password: this.password,
-    provider: this.provider,
-    coords: coords
-  });
+  //console.log('logging in...', {
+    //username: this.username,
+    //password: this.password,
+    //provider: this.provider,
+    //coords: coords
+  //});
 
   api.init(this.username, this.password, {
     type: 'coords',
@@ -107,7 +107,7 @@ Scanner.prototype.walk = function(coords, callback) {
 
   var points = spiral_walk(coords, 0.0015, 49);
 
-  console.log(points);
+  //console.log(points);
   this.emit('walk', points);
 
   this.q = points.map((p) => {
@@ -120,11 +120,11 @@ Scanner.prototype.walk = function(coords, callback) {
 Scanner.prototype.getPokemons = function(coords, callback) {
   if (!this.api) {
     return this.login(coords, () => {
-      this.walk(coords);
+      this.getPokemons(coords, callback);
     });
   }
 
-  console.log('getting pokemons...', coords);
+  //console.log('getting pokemons...', coords);
   this.emit('scan', coords);
 
   this.api.playerInfo.latitude = coords.latitude;
@@ -155,7 +155,7 @@ Scanner.prototype.getPokemons = function(coords, callback) {
           encounter_id: eid.toString('hex'),
         };
 
-        if (!this.pokemons[eid]) {
+        if (this.pokemons[eid] !== undefined) {
           this.emit('pokemon', pokemon);
         }
 
@@ -180,7 +180,7 @@ Scanner.prototype.getPokemons = function(coords, callback) {
           encounter_id: eid.toString('hex'),
         };
 
-        if (!this.pokemons[eid]) {
+        if (this.pokemons[eid] !== undefined) {
           this.emit('pokemon', pokemon);
         }
 
