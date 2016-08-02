@@ -74,23 +74,32 @@ io.on('connection', function(socket){
     socket.emit('walk', scanner.points);
   }
 
-  scanner.on('pokemon', function(pokemon) {
+  function emitPokemon(pokemon) {
     socket.emit('pokemon', pokemon);
-  });
-
-  scanner.on('error', function(err) {
+  }
+  function emitError(err) {
     socket.emit('error', err);
-  });
-
-  scanner.on('scan', function(coords) {
+  }
+  function emitScan(coords) {
     socket.emit('scan', coords);
-  });
-
-  scanner.on('walk', function(points) {
+  }
+  function emitWalk(points) {
     socket.emit('walk', points);
-  });
+  }
+
+  scanner.on('pokemon', emitPokemon);
+  scanner.on('error', emitError);
+  scanner.on('scan', emitScan);
+  scanner.on('walk', emitWalk);
 
   socket.on('scan', function(position) {
     scanner.scan({ latitude: position.lat, longitude: position.lng });
+  });
+
+  socket.on('disconnect', function() {
+    scanner.removeListener('pokemon', emitPokemon);
+    scanner.removeListener('error', emitError);
+    scanner.removeListener('scan', emitScan);
+    scanner.removeListener('walk', emitWalk);
   });
 });
