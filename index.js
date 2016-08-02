@@ -45,7 +45,8 @@ scanner.on('pokemon', function(pokemon) {
       subject: 'A "' + pokemon.name + '" is near you!',
       text: [
         'It will disappear in ', mm, 'm', ss, 's.\n',
-        'Find out more at: https://pogo.soymind.com .\n'
+        'Find out more at: https://pogo.soymind.com .\n',
+        JSON.stringify(pokemon, null, 4)
       ].join('')
     }, function(error, info) {
       if (error) return console.log(error);
