@@ -27,11 +27,18 @@ scanner.on('pokemon', function(pokemon) {
   console.log('found: ', pokemon);
 
   if (whitelist[pokemon.id]) {
+    var expire = pokemon.expire;
+    var mm = expire ? Math.floor(expire / 60000) : 'unknown';
+    var ss = expire ? (expire / 1000) % 60 : 'unknown';
+
     transporter.sendMail({
       from: '"Chaoran Yang" <chaoran@rice.edu>',
       to: '"Chaoran Yang" <chaorany@me.com>',
       subject: 'A "' + pokemon.name + '" is near you!',
-      text: 'Find out where it is: https://45.55.28.100'
+      text: [
+        'It will disappear in ', mm, 'm', ss, 's.\n',
+        'Find out more at: https://pogo.soymind.com .\n'
+      ].join('')
     }, function(error, info) {
       if (error) return console.log(error);
       console.log('Message sent: ' + info.response);
