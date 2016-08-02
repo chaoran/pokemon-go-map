@@ -109,6 +109,7 @@ Scanner.prototype.walk = function(coords, callback) {
 
   //console.log(points);
   this.emit('walk', points);
+  this.points = points;
 
   this.q = points.map((p) => {
     return (callback) => this.getPokemons(p, callback);
