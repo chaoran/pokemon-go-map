@@ -156,7 +156,7 @@ Scanner.prototype.getPokemons = function(coords, callback) {
           encounter_id: eid.toString('hex'),
         };
 
-        if (this.pokemons[eid] !== undefined) {
+        if (this.pokemons[eid] === undefined) {
           this.emit('pokemon', pokemon);
         }
 
@@ -181,7 +181,7 @@ Scanner.prototype.getPokemons = function(coords, callback) {
           encounter_id: eid.toString('hex'),
         };
 
-        if (this.pokemons[eid] !== undefined) {
+        if (this.pokemons[eid] === undefined) {
           this.emit('pokemon', pokemon);
         }
 
